@@ -78,6 +78,23 @@ def supertrend(h, l, c, n=10, m=3.0):
     return d
 
 
+def adx_series(h, l, c, n=14):
+    """ADX (EMA-Glättung wie im Plugin trading-skills); nutzt nur Kerzen bis i."""
+    N = len(c)
+    pdm, mdm, tr = [0.0] * N, [0.0] * N, [0.0] * N
+    for i in range(1, N):
+        up, dn = h[i] - h[i - 1], l[i - 1] - l[i]
+        p, m = max(up, 0.0), max(dn, 0.0)
+        pdm[i], mdm[i] = (0.0 if p < m else p), (0.0 if m < p else m)
+        tr[i] = max(h[i] - l[i], abs(h[i] - c[i - 1]), abs(l[i] - c[i - 1]))
+    pe, me, te = ema(pdm, 2 * n - 1), ema(mdm, 2 * n - 1), ema(tr, 2 * n - 1)
+    dx = []
+    for i in range(N):
+        pdi, mdi = (100 * pe[i] / te[i], 100 * me[i] / te[i]) if te[i] > 0 else (0.0, 0.0)
+        dx.append(100 * abs(pdi - mdi) / (pdi + mdi) if pdi + mdi > 0 else 0.0)
+    return ema(dx, 2 * n - 1)
+
+
 class Series:
     """Kerzenreihe mit allen Indikatoren. Kerzen: Liste von Dicts {t, o, h, l, c, v} (t = Beginn der Kerze in ms)."""
 
@@ -92,6 +109,8 @@ class Series:
         self.e9, self.e21, self.e20, self.e50, self.e200 = (ema(self.c, k) for k in (9, 21, 20, 50, 200))
         self.bb_up, self.bb_lo = bollinger(self.c, 20, 2.5)
         self.rsi2 = rsi(self.c, 2)
+        self.adx = adx_series(self.h, self.l, self.c, 14)
+        self.htf, self.hmap = {}, {}                                          # höhere Zeitrahmen (siehe link)
         self.st_dir = supertrend(self.h, self.l, self.c, 10, 3.0)
         u2, l2 = bollinger(self.c, 20, 2.0)                                  # Bollinger-Breite relativ zur Mitte und ihr Rang in den letzten 100 Kerzen
         bw = [(u - lo) / ((u + lo) / 2) if (u + lo) else 0.0 for u, lo in zip(u2, l2)]
@@ -146,6 +165,84 @@ def sig_flip(s, i):
         return "long", 2.0, "flip"
     if s.e9[i] < s.e21[i] and s.e9[i - 1] >= s.e21[i - 1]:
         return "short", 2.0, "flip"
+
+
+def link(s, name, H):
+    """Höheren Zeitrahmen H an die Reihe s hängen: s.hmap[name][i] = Index der letzten bei Schluss von Kerze i schon GESCHLOSSENEN H-Kerze (-1 = keine)."""
+    ends = [t + H.step for t in H.t]
+    m, j = [], -1
+    for i in range(s.n):
+        end = s.t[i] + s.step
+        while j + 1 < H.n and ends[j + 1] <= end:
+            j += 1
+        m.append(j)
+    s.htf[name], s.hmap[name] = H, m
+
+
+def _trend(s, name, i):
+    """Trend im höheren Zeitrahmen: +1 (Schluss > EMA50 > EMA200), -1 (spiegelbildlich), sonst 0."""
+    H, j = s.htf[name], s.hmap[name][i]
+    if j < 200:
+        return 0
+    if H.c[j] > H.e50[j] > H.e200[j]:
+        return 1
+    if H.c[j] < H.e50[j] < H.e200[j]:
+        return -1
+    return 0
+
+
+def sig_aligned_breakout(htf, N, vr_min, stop):
+    def f(s, i):
+        if i < N + 1 or s.vr[i] < vr_min:
+            return None
+        t = _trend(s, htf, i)
+        if t == 1 and s.c[i] > max(s.h[i - N:i]):
+            return "long", stop, "trail"
+        if t == -1 and s.c[i] < min(s.l[i - N:i]):
+            return "short", stop, "trail"
+    return f
+
+
+def sig_aligned_pullback(htf):
+    def f(s, i):
+        if i < 30:
+            return None
+        t = _trend(s, htf, i)
+        if t == 1 and s.l[i] <= s.e20[i] and s.c[i] > s.e20[i] and s.c[i - 1] < s.e20[i - 1] * 1.002:
+            return "long", 1.5, "trail"
+        if t == -1 and s.h[i] >= s.e20[i] and s.c[i] < s.e20[i] and s.c[i - 1] > s.e20[i - 1] * 0.998:
+            return "short", 1.5, "trail"
+    return f
+
+
+def sig_aligned_supertrend(htf):
+    def f(s, i):
+        if i < 30:
+            return None
+        t = _trend(s, htf, i)
+        if t == 1 and s.st_dir[i] == 1 and s.st_dir[i - 1] == -1:
+            return "long", 2.5, "slow"
+        if t == -1 and s.st_dir[i] == -1 and s.st_dir[i - 1] == 1:
+            return "short", 2.5, "slow"
+    return f
+
+
+def sig_ema_cross(s, i):
+    if i < 60:
+        return None
+    if s.e20[i] > s.e50[i] and s.e20[i - 1] <= s.e50[i - 1]:
+        return "long", 3.0, "flip"
+    if s.e20[i] < s.e50[i] and s.e20[i - 1] >= s.e50[i - 1]:
+        return "short", 3.0, "flip"
+
+
+def sig_adx_breakout(s, i):
+    if i < 40 or s.adx[i] < 25 or s.vr[i] < 1.2:
+        return None
+    if s.c[i] > max(s.h[i - 20:i]):
+        return "long", 1.5, "trail"
+    if s.c[i] < min(s.l[i - 20:i]):
+        return "short", 1.5, "trail"
 
 
 def sig_donchian(N, stop, kind):
@@ -227,7 +324,20 @@ STRATS = {
     "mom_5m": ("5m", sig_momentum, "Momentum-Kerze mit Volumen, Scalp Ziel 1,5 R (5m)"),
     "mom_15m": ("15m", sig_momentum, "Momentum-Kerze mit Volumen, Scalp Ziel 1,5 R (15m)"),
     "vwap_15m": ("15m", sig_vwap, "Rückkehr zum VWAP nach Überdehnung (15m)"),
+    # --- dritte Welle (2026-11-07, vorab festgelegt): Einstiege nur in Richtung des höheren Zeitrahmens, langsame Trendfolge als Parameterfamilie ---
+    "a4_15m_dc": ("15m", sig_aligned_breakout("4h", 20, 1.2, 1.5), "4h-Trend + 15m-Ausbruch 20 (Volumen 1,2x)"),
+    "a4_15m_pb": ("15m", sig_aligned_pullback("4h"), "4h-Trend + 15m-Pullback am EMA20"),
+    "a1_5m_dc": ("5m", sig_aligned_breakout("1h", 20, 1.5, 1.5), "1h-Trend + 5m-Ausbruch 20 (Volumen 1,5x)"),
+    "a4_1h_st": ("1h", sig_aligned_supertrend("4h"), "4h-Trend + 1h-Supertrend-Wechsel, Trail 3 ATR"),
+    "dc50_4h": ("4h", sig_donchian(50, 4.0, "slow5"), "Trendfolge: Ausbruch 50 Kerzen, Stop 4 / Trail 5 ATR (4h)"),
+    "dc75_4h": ("4h", sig_donchian(75, 4.0, "slow5"), "Trendfolge: Ausbruch 75 Kerzen, Stop 4 / Trail 5 ATR (4h)"),
+    "dc150_4h": ("4h", sig_donchian(150, 4.0, "slow5"), "Trendfolge: Ausbruch 150 Kerzen, Stop 4 / Trail 5 ATR (4h)"),
+    "st_4h": ("4h", sig_supertrend, "Supertrend(10,3) Wechsel, immer im Markt (4h)"),
+    "ema_4h": ("4h", sig_ema_cross, "EMA20/50-Kreuz, immer im Markt, Stop 3 ATR (4h)"),
+    "adx_15m": ("15m", sig_adx_breakout, "Ausbruch 20 nur bei ADX >= 25 und Volumen 1,2x (15m)"),
 }
+# Strategien, die höhere Zeitrahmen als Filter brauchen
+NEEDS = {"a4_15m_dc": ("4h",), "a4_15m_pb": ("4h",), "a1_5m_dc": ("1h",), "a4_1h_st": ("4h",)}
 
 
 # ---------------------------------------------------------------- virtuelles Konto

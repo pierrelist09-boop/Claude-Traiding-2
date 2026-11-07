@@ -14,6 +14,8 @@ class Replay(unittest.TestCase):
         tf, sig, _ = core.STRATS[strat]
         cs = data.candles("ZEC", tf, 5000, max_age=10 ** 12)
         s = core.Series(cs)
+        for need in core.NEEDS.get(strat, ()):
+            core.link(s, need, core.Series(data.candles("ZEC", need, 5000, max_age=10 ** 12)))
         ref = T.simulate(s, 210, s.n, sig)                       # (t_entry, R, t_exit, stop_anteil, cost, gross)
         st = core.new_state(strat)
         got = []
