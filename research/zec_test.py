@@ -13,71 +13,13 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from zecfast import data
-from zecfast.indicators import atr, bollinger, ema, rsi
+from zecfast.core import FEE, FUND_H, LEV, MAX_STOP_FRAC, MAXBARS, RISK, SLIP, STRATS as CORE_STRATS, Series as S, sig_breakout, sig_flip, sig_meanrev, sig_pullback
 
-FEE, SLIP, FUND_H, LEV, RISK = 0.00045, 0.0003, 0.0000125, 10, 0.02
 COIN = "ZEC"
 TFMIN = {"5m": 5, "15m": 15}
-
-
-class S:
-    def __init__(self, cs):
-        self.t = [c["t"] for c in cs]; self.o = [c["o"] for c in cs]; self.h = [c["h"] for c in cs]
-        self.l = [c["l"] for c in cs]; self.c = [c["c"] for c in cs]; self.v = [c["v"] for c in cs]
-        self.n = len(cs)
-        self.atr = atr(self.h, self.l, self.c, 14)
-        self.rsi7 = rsi(self.c, 7)
-        self.e9, self.e21, self.e20, self.e50, self.e200 = (ema(self.c, k) for k in (9, 21, 20, 50, 200))
-        self.bb_up, self.bb_lo, _ = bollinger(self.c, 20, 2.5)
-        self.vr = [1.0] * self.n
-        for i in range(self.n):
-            w = self.v[max(0, i - 20):i]
-            self.vr[i] = self.v[i] / (sum(w) / len(w)) if w and sum(w) > 0 else 1.0
-
-
-# ---- Signale: nur Kerzen bis einschließlich i. Rückgabe (side, stop_mult, kind) kind: 'trail' | 'mean' | 'flip'
-def sig_breakout(N):
-    def f(s, i):
-        if i < N + 1 or s.vr[i] < 1.5:
-            return None
-        if s.c[i] > max(s.h[i - N:i]):
-            return "long", 1.5, "trail"
-        if s.c[i] < min(s.l[i - N:i]):
-            return "short", 1.5, "trail"
-    return f
-
-
-def sig_meanrev(s, i):
-    if i < 30:
-        return None
-    if s.rsi7[i] <= 12 and s.c[i] < s.bb_lo[i]:
-        return "long", 1.5, "mean"
-    if s.rsi7[i] >= 88 and s.c[i] > s.bb_up[i]:
-        return "short", 1.5, "mean"
-
-
-def sig_pullback(s, i):
-    if i < 210:
-        return None
-    if s.e50[i] > s.e200[i] and s.c[i] > s.e200[i] and s.l[i] <= s.e20[i] and s.c[i] > s.e20[i] and s.c[i - 1] < s.e20[i - 1] * 1.002:
-        return "long", 1.5, "trail"
-    if s.e50[i] < s.e200[i] and s.c[i] < s.e200[i] and s.h[i] >= s.e20[i] and s.c[i] < s.e20[i] and s.c[i - 1] > s.e20[i - 1] * 0.998:
-        return "short", 1.5, "trail"
-
-
-def sig_flip(s, i):
-    if i < 30:
-        return None
-    if s.e9[i] > s.e21[i] and s.e9[i - 1] <= s.e21[i - 1]:
-        return "long", 2.0, "flip"
-    if s.e9[i] < s.e21[i] and s.e9[i - 1] >= s.e21[i - 1]:
-        return "short", 2.0, "flip"
-
-
 STRATS = [("B20 Ausbruch 20 Kerzen + Volumen 1,5x", sig_breakout(20)), ("B40 Ausbruch 40 Kerzen + Volumen 1,5x", sig_breakout(40)),
           ("M  Umkehr: RSI(7) Extrem + Bollinger 2,5", sig_meanrev), ("P  Pullback am EMA20 im Trend (EMA50/200)", sig_pullback),
           ("F  Dauer-Wechsel: EMA9/21-Kreuz immer long oder short", sig_flip)]
-MAXBARS = {"trail": 96, "mean": 24, "flip": 400}
 
 
 def simulate(s, lo, hi, sig):
@@ -96,6 +38,9 @@ def simulate(s, lo, hi, sig):
         d = sm * a
         stop = entry - d if long else entry + d
         target = (s.e20[i] if kind == "mean" else None)
+        if d / entry > MAX_STOP_FRAC:
+            i += 1
+            continue
         if target is not None and ((long and target <= entry) or (not long and target >= entry)):
             i += 1
             continue
@@ -127,7 +72,7 @@ def simulate(s, lo, hi, sig):
         gross = ((ex - entry) if long else (entry - ex)) / d
         cost = (2 * FEE + FUND_H * hours) * entry / d
         out.append((s.t[e], gross - cost, s.t[min(k, s.n - 1)], d / entry, cost, gross))
-        i = k + 1
+        i = k if why == "wechsel" else k + 1
     return out
 
 

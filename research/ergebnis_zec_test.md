@@ -11,7 +11,7 @@ Kosten je Seite 0.045 % Gebühr + 0.03 % Slippage = 0.15 % je Rundreise auf den 
 | B40 Ausbruch 40 Kerzen + Volumen 1,5x | 55 / -0.35 | 34 / -0.31 | 29 / +0.10 | 1.19 | 31 % | 0.12 | +4 % (Rückgang 12 %, bester Tag +7 %) | 7.2 |
 | M  Umkehr: RSI(7) Extrem + Bollinger 2,5 | 4 / -0.46 | 7 / -0.47 | 5 / -1.12 | 0.00 | 0 % | 0.09 | -11 % (Rückgang 11 %, bester Tag -2 %) | 1.2 |
 | P  Pullback am EMA20 im Trend (EMA50/200) | 120 / -0.28 | 66 / -0.45 | 63 / -0.20 | 0.67 | 29 % | 0.12 | -24 % (Rückgang 26 %, bester Tag +4 %) | 15.8 |
-| F  Dauer-Wechsel: EMA9/21-Kreuz immer long oder short | 57 / -0.08 | 31 / -0.24 | 33 / -0.17 | 0.66 | 27 % | 0.09 | -12 % (Rückgang 21 %, bester Tag +9 %) | 8.2 |
+| F  Dauer-Wechsel: EMA9/21-Kreuz immer long oder short | 95 / -0.35 | 50 / -0.38 | 57 / -0.26 | 0.52 | 25 % | 0.09 | -27 % (Rückgang 34 %, bester Tag +3 %) | 14.2 |
 
 ## 15m-Kerzen: 5000 Kerzen = 52 Tage (16.09.–07.11.2026), Ø ATR(14) = 0.84 % des Kurses. Eine Rundreise kostet 0.15 % = 0.18 ATR.
 
@@ -21,6 +21,6 @@ Kosten je Seite 0.045 % Gebühr + 0.03 % Slippage = 0.15 % je Rundreise auf den 
 | B40 Ausbruch 40 Kerzen + Volumen 1,5x | 56 / -0.12 | 34 / +0.30 | 32 / -0.13 | 0.78 | 31 % | 0.08 | -9 % (Rückgang 18 %, bester Tag +8 %) | 2.5 |
 | M  Umkehr: RSI(7) Extrem + Bollinger 2,5 | 14 / -0.18 | 3 / -0.24 | 4 / -0.55 | 0.31 | 25 % | 0.05 | -4 % (Rückgang 6 %, bester Tag +2 %) | 0.3 |
 | P  Pullback am EMA20 im Trend (EMA50/200) | 108 / +0.06 | 45 / -0.22 | 55 / -0.33 | 0.40 | 31 % | 0.08 | -31 % (Rückgang 32 %, bester Tag +2 %) | 4.2 |
-| F  Dauer-Wechsel: EMA9/21-Kreuz immer long oder short | 57 / -0.39 | 21 / +0.89 | 27 / -0.13 | 0.78 | 30 % | 0.06 | -8 % (Rückgang 11 %, bester Tag +6 %) | 2.1 |
+| F  Dauer-Wechsel: EMA9/21-Kreuz immer long oder short | 92 / -0.23 | 35 / +0.56 | 44 / +0.10 | 1.18 | 34 % | 0.06 | +7 % (Rückgang 12 %, bester Tag +8 %) | 3.4 |
 
 R = Gewinn in Vielfachen des Stop-Abstands, nach Kosten. Ein Vorteil gilt nur, wenn Validierung UND Test Ø R > 0 haben und der Test mindestens 30 Trades hat.
