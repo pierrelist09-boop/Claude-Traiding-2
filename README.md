@@ -12,7 +12,7 @@ Machbarkeitstest (`research/zec_test.py`, Ergebnis `research/ergebnis_zec_test.m
 - `LEARNINGS.md` Messprotokoll.
 
 ## Live (nur Paper)
-Im Bot (Projekt Claude-1) läuft `app/claude1/zec.py`: holt alle 30 s bei Bedarf öffentliche ZEC-Kerzen (5m/15m) und rechnet 5 virtuelle Konten à 1.000 $ weiter (b20_5m, f_5m, f_15m, p_15m, b20_15m; 2 % Risiko je Trade, Hebel bis 10). Eigene Tabellen `zec_acct`/`zec_trades`, kein Zugriff auf das Claude-1-Konto, kein Live-Pfad. Seite `/claude1/zec`, Kennzahlen auch in `/claude1/api/state` (Abschnitt `zec`). Einschalten: `CLAUDE1_ZEC=true` in der `.env`, Bot neu bauen.
+Das Projekt **Claude-1** im Bot-Panel (autrionex.com/claude1) ist seit 2026-11-07 der ZEC-Vorwärtstest; der frühere Claude-1 (Trading-Konto, Limits, Live-Anbindung, Trendfolge E) wurde entfernt (Git-Tag `claude1-alt-2026-11-07` im Bot-Repo). `app/claude1/zec.py` holt alle 20 s bei Bedarf öffentliche ZEC-Kerzen (5m/15m) und rechnet 5 virtuelle Konten à 1.000 $ weiter (b20_5m, f_5m, f_15m, p_15m, b20_15m; 2 % Risiko je Trade, Hebel bis 10). Eigene Tabellen `zec_acct`/`zec_trades`, keine Orders, keine Börsenanbindung außer dem öffentlichen Kerzenabruf. Die Seite zeigt Konten mit Kurve, offene Positionen und letzte Trades und aktualisiert sich selbst; Kennzahlen auch unter `/claude1/api/state` (Token, nur lokal).
 
 ## Verbesserungsschleife
 1. `tools/zec_review.py` (im Bot-Repo) liest die Konten: Urteil erst ab 30 Trades je Konto (Ø R, Standardfehler, Profit-Faktor, long/short getrennt, Rückgang, Ausstiegsgründe).
