@@ -9,6 +9,7 @@ Position offen ist, ein neues Signal prüfen. Einstieg zum Eröffnungskurs der n
 Kosten je Seite: Gebühr 0,045 % + Slippage 0,03 %, Funding 0,00125 % je Stunde. Risiko 2 % des virtuellen Kontos bis zum Stop, Hebel höchstens 10.
 """
 FEE, SLIP, FUND_H, LEV, RISK = 0.00045, 0.0003, 0.0000125, 10, 0.02
+RISKS = {}                    # Risiko je Trade pro Konto, wenn es nicht 2 % ist (siehe Profit-Auswahl unten)
 MAX_STOP_FRAC = 0.5           # Stop weiter als 50 % weg: unsinnig, Signal wird übersprungen. (Liquidation ist nie vorher dran: bei 2 % Risiko liegt sie 50 Stop-Abstände entfernt.)
 TF_MS = {"5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}
 # Ausstiegsarten: Nachzieh-Abstand in ATR (None = kein Trail), längste Haltedauer in Kerzen, Ziel (None, EMA20, VWAP oder festes Vielfaches des Stop-Abstands)
@@ -400,6 +401,16 @@ STRATS = {
 NEEDS = {"a4_15m_dc": ("4h",), "a4_15m_pb": ("4h",), "a1_5m_dc": ("1h",), "a4_1h_st": ("4h",), "dc100_d1_4h": ("1d",)}
 
 
+# Profit-Auswahl (2026-11-07, Wunsch des Besitzers: nur Profit zählt): die fünf Strategien mit dem größten Rückblick-Gewinn (532 bzw. 200 Tage, siehe
+# research/ergebnis_profit_ranking.md) laufen noch einmal mit 5 % statt 2 % Risiko je Trade. Gleiche Signale, nur größere Position (Hebel bleibt <= 10).
+for _k in ("ema_4h", "tsm120_4h", "st_1h", "pb_4h", "dcL_100_4h"):
+    _tf, _sig, _desc = STRATS[_k]
+    STRATS["x5_" + _k] = (_tf, _sig, _desc + " · 5 % Risiko")
+    RISKS["x5_" + _k] = 0.05
+    if _k in NEEDS:
+        NEEDS["x5_" + _k] = NEEDS[_k]
+
+
 # ---------------------------------------------------------------- virtuelles Konto
 def new_state(strat, eq=1000.0):
     return {"strat": strat, "eq": eq, "pos": None, "last_t": 0}
@@ -420,7 +431,7 @@ def _open(st, s, i, next_open, g):
         return None
     if d / entry > MAX_STOP_FRAC:
         return None
-    notional = min(RISK * st["eq"] / (d / entry), LEV * st["eq"])
+    notional = min(RISKS.get(st["strat"], RISK) * st["eq"] / (d / entry), LEV * st["eq"])
     return {"side": side, "kind": kind, "entry": entry, "d": d, "stop": stop, "trail": stop, "extreme": entry, "target": target,
             "bars": 0, "t_open": s.t[i] + s.step, "notional": notional}
 
