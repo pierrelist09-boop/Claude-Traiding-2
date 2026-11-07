@@ -11,7 +11,7 @@ from zecfast import core, data
 
 class Replay(unittest.TestCase):
     def check(self, strat):
-        tf, sig, _ = core.STRATS[strat]
+        tf, sig, _ = ({**core.STRATS, **core.ARCHIVE})[strat]
         cs = data.candles("ZEC", tf, 5000, max_age=10 ** 12)
         s = core.Series(cs)
         for need in core.NEEDS.get(strat, ()):
@@ -30,7 +30,7 @@ class Replay(unittest.TestCase):
             self.assertAlmostEqual(a["r"], b[1], places=9)
 
     def test_alle_strategien(self):
-        for strat in core.STRATS:
+        for strat in {**core.STRATS, **core.ARCHIVE}:
             with self.subTest(strat=strat):
                 self.check(strat)
 

@@ -20,7 +20,7 @@ def main():
            "Bei 25 Versuchen ist mit einigen Zufallstreffern zu rechnen (Bonferroni: ein einzelner Treffer müsste deutlich stärker sein): ein einzelner Kandidat ist noch kein Beleg.\n",
            "| Konto | Zeitraum (Tage) | Training n / Ø R | Validierung n / Ø R | Test n / Ø R | Test PF | Test-Konto (Rückgang) | Urteil |", "|---|---|---|---|---|---|---|---|"]
     cache = {}
-    for strat, (tf, sig, desc) in core.STRATS.items():
+    for strat, (tf, sig, desc) in {**core.STRATS, **core.ARCHIVE}.items():
         for need in (tf,) + core.NEEDS.get(strat, ()):
             if need not in cache:
                 cache[need] = core.Series(data.candles("ZEC", need, 5000, max_age=10 ** 12))

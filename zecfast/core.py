@@ -401,6 +401,13 @@ STRATS = {
 NEEDS = {"a4_15m_dc": ("4h",), "a4_15m_pb": ("4h",), "a1_5m_dc": ("1h",), "a4_1h_st": ("4h",), "dc100_d1_4h": ("1d",)}
 
 
+# Aussortieren (2026-11-07, Wunsch des Besitzers: "die schlechten raus, damit wir im Schnitt am meisten Geld machen"): im laufenden Vorwärtstest bleiben nur Strategien
+# mit einem Gewinn von mindestens +50 % über die gesamte Historie bei 2 % Risiko (research/ergebnis_profit_ranking.md). Alle anderen liegen im ARCHIV: sie laufen
+# nicht mehr live, bleiben aber für Backtests und Vergleiche erhalten. Achtung: Auswahl nach demselben Rückblick, an dem bewertet wird (Gewinner-Fluch).
+KEEP = {"ema_4h", "tsm120_4h", "st_1h", "pb_4h", "dcL_100_4h", "dc100_d1_4h", "dc100_4h", "gc_4h", "dc150_4h", "dc100_t7_4h", "dc75_4h"}
+ARCHIVE = {k: STRATS.pop(k) for k in [k for k in STRATS if k not in KEEP]}
+
+
 # Profit-Auswahl (2026-11-07, Wunsch des Besitzers: nur Profit zählt): die fünf Strategien mit dem größten Rückblick-Gewinn (532 bzw. 200 Tage, siehe
 # research/ergebnis_profit_ranking.md) laufen noch einmal mit 5 % statt 2 % Risiko je Trade. Gleiche Signale, nur größere Position (Hebel bleibt <= 10).
 for _k in ("ema_4h", "tsm120_4h", "st_1h", "pb_4h", "dcL_100_4h"):
@@ -474,7 +481,7 @@ def _close(st, p, s, k, ex, why):
 
 def on_candle(st, s, i, next_open):
     """Die gerade geschlossene Kerze i verarbeiten. Gibt die dabei geschlossenen Trades zurück (Liste von Dicts)."""
-    sig = STRATS[st["strat"]][1]
+    sig = (STRATS.get(st["strat"]) or ARCHIVE[st["strat"]])[1]
     out, exited, reenter = [], False, False
     p = st["pos"]
     if p:
