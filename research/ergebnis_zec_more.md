@@ -29,3 +29,13 @@ Kosten je Seite 0,045 % Gebühr + 0,03 % Slippage, Funding, Hebel 10, 2 % Risiko
 | st_4h (Supertrend(10,3) Wechsel, immer im Markt (4h)) | 567 | 35 / -0.28 | 20 / -0.22 | 20 / -0.44 | 0.34 | -16 % (19 %) | kein Vorteil |
 | ema_4h (EMA20/50-Kreuz, immer im Markt, Stop 3 ATR (4h)) | 567 | 19 / +4.35 | 14 / -0.22 | 9 / +3.57 | 9.14 | +62 % (6 %) | kein Vorteil |
 | adx_15m (Ausbruch 20 nur bei ADX >= 25 und Volumen 1,2x (15m)) | 52 | 36 / -0.24 | 27 / +0.33 | 22 / -0.16 | 0.71 | -7 % (9 %) | kein Vorteil |
+| dcL_100_4h (4h Ausbruch 100 nur LONG, Stop 4 / Trail 5 ATR) | 567 | 7 / +2.14 | 4 / +1.06 | 3 / +3.94 | 111.10 | +24 % (0 %) | positiv, aber zu wenig Test-Trades |
+| dcS_100_4h (4h Ausbruch 100 nur SHORT, Stop 4 / Trail 5 ATR) | 567 | 5 / -0.25 | 4 / -0.00 | 4 / -0.61 | 0.00 | -5 % (5 %) | kein Vorteil |
+| dc100_t3_4h (4h Ausbruch 100, enger Trail 3 ATR) | 567 | 21 / +0.06 | 9 / +0.76 | 13 / +0.07 | 1.19 | +1 % (5 %) | positiv, aber zu wenig Test-Trades |
+| dc100_t7_4h (4h Ausbruch 100, weiter Trail 7 ATR) | 567 | 10 / +0.84 | 8 / +0.28 | 6 / +2.46 | 5.20 | +27 % (4 %) | positiv, aber zu wenig Test-Trades |
+| dc100_d1_4h (4h Ausbruch 100 nur in Richtung des Tagestrends (EMA50/200)) | 567 | 6 / +2.53 | 3 / +0.60 | 3 / +3.68 | 29.58 | +22 % (1 %) | positiv, aber zu wenig Test-Trades |
+| pb_4h (4h Pullback am EMA20 im Trend (EMA50/200), Stop 3 / Trail 5 ATR) | 567 | 22 / +0.93 | 15 / +0.28 | 12 / +1.58 | 3.71 | +35 % (9 %) | positiv, aber zu wenig Test-Trades |
+| gc_4h (4h Golden/Death Cross EMA50/200, immer im Markt) | 567 | 6 / +7.95 | 1 / +3.17 | 7 / -0.83 | 0.00 | -11 % (11 %) | kein Vorteil |
+| dc30_4h (4h Ausbruch 30 (schneller), Stop 3,5 / Trail 3 ATR) | 567 | 44 / -0.05 | 24 / +0.24 | 22 / +0.25 | 1.77 | +10 % (6 %) | positiv, aber zu wenig Test-Trades |
+| tsm120_4h (4h Zeitreihen-Momentum (20-Tage-Rendite), immer im Markt) | 567 | 21 / +2.83 | 32 / +0.03 | 22 / +1.15 | 5.92 | +47 % (4 %) | positiv, aber zu wenig Test-Trades |
+| sq_4h (4h Bollinger-Verengung, dann Ausbruch mit Volumen, Trail 5 ATR) | 567 | 3 / +0.41 | 8 / +0.39 | 7 / -0.91 | 0.00 | -12 % (12 %) | kein Vorteil |

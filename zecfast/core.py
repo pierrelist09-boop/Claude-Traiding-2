@@ -10,11 +10,11 @@ Kosten je Seite: Gebühr 0,045 % + Slippage 0,03 %, Funding 0,00125 % je Stunde.
 """
 FEE, SLIP, FUND_H, LEV, RISK = 0.00045, 0.0003, 0.0000125, 10, 0.02
 MAX_STOP_FRAC = 0.5           # Stop weiter als 50 % weg: unsinnig, Signal wird übersprungen. (Liquidation ist nie vorher dran: bei 2 % Risiko liegt sie 50 Stop-Abstände entfernt.)
-TF_MS = {"5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000}
+TF_MS = {"5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}
 # Ausstiegsarten: Nachzieh-Abstand in ATR (None = kein Trail), längste Haltedauer in Kerzen, Ziel (None, EMA20, VWAP oder festes Vielfaches des Stop-Abstands)
 KINDS = {"trail": dict(trail=2.0, maxbars=96, target=None), "mean": dict(trail=None, maxbars=24, target="ema20"),
          "vwap": dict(trail=None, maxbars=24, target="vwap"), "flip": dict(trail=None, maxbars=400, target=None),
-         "slow": dict(trail=3.0, maxbars=300, target=None), "slow5": dict(trail=5.0, maxbars=600, target=None),
+         "slow": dict(trail=3.0, maxbars=300, target=None), "slow5": dict(trail=5.0, maxbars=600, target=None), "slow7": dict(trail=7.0, maxbars=800, target=None),
          "scalp": dict(trail=None, maxbars=12, target=1.5)}
 
 
@@ -245,15 +245,64 @@ def sig_adx_breakout(s, i):
         return "short", 1.5, "trail"
 
 
-def sig_donchian(N, stop, kind):
+def sig_donchian(N, stop, kind, sides="both", htf=None):
+    """Ausbruch über das N-Kerzen-Hoch/-Tief; sides: both, long oder short; htf: Tagestrend o. ä. als Filter (Richtung des höheren Zeitrahmens)."""
     def f(s, i):
         if i < N + 1:
             return None
-        if s.c[i] > max(s.h[i - N:i]):
+        t = _trend(s, htf, i) if htf else 0
+        if sides != "short" and s.c[i] > max(s.h[i - N:i]) and (not htf or t == 1):
             return "long", stop, kind
-        if s.c[i] < min(s.l[i - N:i]):
+        if sides != "long" and s.c[i] < min(s.l[i - N:i]) and (not htf or t == -1):
             return "short", stop, kind
     return f
+
+
+def sig_cross(fast, slow, stop, start=210):
+    """Kreuz zweier EMAs (Attribute der Reihe, z. B. e50/e200), immer im Markt (Art flip)."""
+    def f(s, i):
+        a, b = getattr(s, fast), getattr(s, slow)
+        if i < start:
+            return None
+        if a[i] > b[i] and a[i - 1] <= b[i - 1]:
+            return "long", stop, "flip"
+        if a[i] < b[i] and a[i - 1] >= b[i - 1]:
+            return "short", stop, "flip"
+    return f
+
+
+def sig_pullback_own(stop, kind):
+    """Rücksetzer an den EMA20 im Trend des eigenen Zeitrahmens (Schluss > EMA50 > EMA200)."""
+    def f(s, i):
+        if i < 210:
+            return None
+        if s.c[i] > s.e50[i] > s.e200[i] and s.l[i] <= s.e20[i] and s.c[i] > s.e20[i] and s.c[i - 1] < s.e20[i - 1] * 1.002:
+            return "long", stop, kind
+        if s.c[i] < s.e50[i] < s.e200[i] and s.h[i] >= s.e20[i] and s.c[i] < s.e20[i] and s.c[i - 1] > s.e20[i - 1] * 0.998:
+            return "short", stop, kind
+    return f
+
+
+def sig_tsm(L, stop):
+    """Zeitreihen-Momentum: Vorzeichen der Rendite über L Kerzen wechselt, immer im Markt (Art flip)."""
+    def f(s, i):
+        if i < L + 2:
+            return None
+        r, r0 = s.c[i] / s.c[i - L] - 1, s.c[i - 1] / s.c[i - 1 - L] - 1
+        if r > 0 and r0 <= 0:
+            return "long", stop, "flip"
+        if r < 0 and r0 >= 0:
+            return "short", stop, "flip"
+    return f
+
+
+def sig_squeeze_4h(s, i):
+    if i < 130 or s.bbw_pr[i] > 0.20 or s.vr[i] < 1.2:
+        return None
+    if s.c[i] > max(s.h[i - 20:i]):
+        return "long", 3.0, "slow5"
+    if s.c[i] < min(s.l[i - 20:i]):
+        return "short", 3.0, "slow5"
 
 
 def sig_supertrend(s, i):
@@ -335,9 +384,20 @@ STRATS = {
     "st_4h": ("4h", sig_supertrend, "Supertrend(10,3) Wechsel, immer im Markt (4h)"),
     "ema_4h": ("4h", sig_ema_cross, "EMA20/50-Kreuz, immer im Markt, Stop 3 ATR (4h)"),
     "adx_15m": ("15m", sig_adx_breakout, "Ausbruch 20 nur bei ADX >= 25 und Volumen 1,2x (15m)"),
+    # --- vierte Welle (2026-11-07, vorab festgelegt): weitere 4h-Mechanismen, nur ZEC ---
+    "dcL_100_4h": ("4h", sig_donchian(100, 4.0, "slow5", "long"), "4h Ausbruch 100 nur LONG, Stop 4 / Trail 5 ATR"),
+    "dcS_100_4h": ("4h", sig_donchian(100, 4.0, "slow5", "short"), "4h Ausbruch 100 nur SHORT, Stop 4 / Trail 5 ATR"),
+    "dc100_t3_4h": ("4h", sig_donchian(100, 4.0, "slow"), "4h Ausbruch 100, enger Trail 3 ATR"),
+    "dc100_t7_4h": ("4h", sig_donchian(100, 4.0, "slow7"), "4h Ausbruch 100, weiter Trail 7 ATR"),
+    "dc100_d1_4h": ("4h", sig_donchian(100, 4.0, "slow5", "both", "1d"), "4h Ausbruch 100 nur in Richtung des Tagestrends (EMA50/200)"),
+    "pb_4h": ("4h", sig_pullback_own(3.0, "slow5"), "4h Pullback am EMA20 im Trend (EMA50/200), Stop 3 / Trail 5 ATR"),
+    "gc_4h": ("4h", sig_cross("e50", "e200", 4.0), "4h Golden/Death Cross EMA50/200, immer im Markt"),
+    "dc30_4h": ("4h", sig_donchian(30, 3.5, "slow"), "4h Ausbruch 30 (schneller), Stop 3,5 / Trail 3 ATR"),
+    "tsm120_4h": ("4h", sig_tsm(120, 4.0), "4h Zeitreihen-Momentum (20-Tage-Rendite), immer im Markt"),
+    "sq_4h": ("4h", sig_squeeze_4h, "4h Bollinger-Verengung, dann Ausbruch mit Volumen, Trail 5 ATR"),
 }
 # Strategien, die höhere Zeitrahmen als Filter brauchen
-NEEDS = {"a4_15m_dc": ("4h",), "a4_15m_pb": ("4h",), "a1_5m_dc": ("1h",), "a4_1h_st": ("4h",)}
+NEEDS = {"a4_15m_dc": ("4h",), "a4_15m_pb": ("4h",), "a1_5m_dc": ("1h",), "a4_1h_st": ("4h",), "dc100_d1_4h": ("1d",)}
 
 
 # ---------------------------------------------------------------- virtuelles Konto
