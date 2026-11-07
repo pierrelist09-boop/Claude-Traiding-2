@@ -13,7 +13,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from zecfast import data
-from zecfast.core import FEE, FUND_H, LEV, MAX_STOP_FRAC, MAXBARS, RISK, SLIP, STRATS as CORE_STRATS, Series as S, sig_breakout, sig_flip, sig_meanrev, sig_pullback
+from zecfast.core import FEE, FUND_H, KINDS, LEV, MAX_STOP_FRAC, RISK, SLIP, STRATS as CORE_STRATS, Series as S, sig_breakout, sig_flip, sig_meanrev, sig_pullback
 
 COIN = "ZEC"
 TFMIN = {"5m": 5, "15m": 15}
@@ -37,7 +37,8 @@ def simulate(s, lo, hi, sig):
         a = s.atr[i]
         d = sm * a
         stop = entry - d if long else entry + d
-        target = (s.e20[i] if kind == "mean" else None)
+        tg = KINDS[kind]["target"]
+        target = s.e20[i] if tg == "ema20" else s.vwap[i] if tg == "vwap" else (entry + tg * d if long else entry - tg * d) if tg else None
         if d / entry > MAX_STOP_FRAC:
             i += 1
             continue
@@ -52,16 +53,17 @@ def simulate(s, lo, hi, sig):
             if target is not None and ((s.h[k] >= target) if long else (s.l[k] <= target)):
                 ex, why = target, "ziel"
                 break
-            if kind == "trail":
+            tm = KINDS[kind]["trail"]
+            if tm:
                 extreme = max(extreme, s.h[k]) if long else min(extreme, s.l[k])
-                new = extreme - 2.0 * s.atr[k] if long else extreme + 2.0 * s.atr[k]
+                new = extreme - tm * s.atr[k] if long else extreme + tm * s.atr[k]
                 trail = max(trail, new) if long else min(trail, new)
             if kind == "flip":
-                g2 = sig_flip(s, k)
+                g2 = sig(s, k)
                 if g2 and g2[0] != side:
                     ex, why = s.c[k], "wechsel"
                     break
-            if k - e >= MAXBARS[kind]:
+            if k - e >= KINDS[kind]["maxbars"]:
                 ex, why = s.c[k], "zeit"
                 break
             k += 1

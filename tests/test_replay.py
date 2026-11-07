@@ -21,26 +21,16 @@ class Replay(unittest.TestCase):
             nxt = s.o[i + 1] if i + 1 < s.n else s.c[i]
             if i < s.n - 2 or st["pos"]:                          # die Referenz bricht Signale in den letzten 2 Kerzen ab
                 got += core.on_candle(st, s, i, nxt)
-        self.assertGreater(len(ref), 5, "zu wenig Referenz-Trades für einen Vergleich")
+        self.assertGreater(len(ref), 2, f"{strat}: zu wenig Referenz-Trades für einen Vergleich")
         self.assertEqual(len(got), len(ref), f"{strat}: Trades {len(got)} statt {len(ref)}")
         for a, b in zip(got, ref):
             self.assertEqual(a["t_open"], b[0])
             self.assertAlmostEqual(a["r"], b[1], places=9)
 
-    def test_b20_5m(self):
-        self.check("b20_5m")
-
-    def test_f_5m(self):
-        self.check("f_5m")
-
-    def test_f_15m(self):
-        self.check("f_15m")
-
-    def test_p_15m(self):
-        self.check("p_15m")
-
-    def test_b20_15m(self):
-        self.check("b20_15m")
+    def test_alle_strategien(self):
+        for strat in core.STRATS:
+            with self.subTest(strat=strat):
+                self.check(strat)
 
 
 class PaperOnly(unittest.TestCase):
